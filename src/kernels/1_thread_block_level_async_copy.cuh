@@ -9,7 +9,7 @@
 // Computes the sum of all the values in the array `A` and stores the result in
 // the output. This kernel uses simple synchronous copy from global to shared
 // memory.
-template <const int BLOCK_TILE_SIZE=32>
+template <const int BLOCK_TILE_SIZE>
 __global__ void sum_simple(float *input, size_t n, float *output) {
   extern __shared__ float sharedTile[];
   // Load the data from the global memory to the shared memory to be processed
@@ -29,6 +29,9 @@ __global__ void sum_simple(float *input, size_t n, float *output) {
   sharedTile[threadIdx.x] = perThreadSum;
   // Have the first thread compute the sum of all the elements in the
   // sharedTile.
+  __syncthreads();
+  if (threadIdx.x != 0)
+    return;
   perThreadSum = 0.0;
   for (size_t i = 0; i < blockDim.x; i++)
     perThreadSum += sharedTile[i];

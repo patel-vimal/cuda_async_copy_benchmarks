@@ -19,7 +19,35 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
   }
 }
 
-int main() {
+void run_kernel_1(float *devicePtr, float *deviceOutputPtr, size_t N) {
+  // Compute launch configuration params.
+  size_t nrThreadsPerBlock = 128;
+  const size_t nrEltToProcessPerBlock = 1024;
+  size_t sharedMemoryRequirement = nrEltToProcessPerBlock * sizeof(float);
+  size_t nrBlocks = size_t(std::ceil(float(N) / nrEltToProcessPerBlock));
+  printf("Launching the kernel...\n");
+  sum_simple<nrEltToProcessPerBlock>
+      <<<nrBlocks, nrThreadsPerBlock, sharedMemoryRequirement>>>(
+          devicePtr, N, deviceOutputPtr);
+}
+
+const int KERNEL_COUNT = 1;
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    printf("Please select a kernel (range 1 to %d).\n", KERNEL_COUNT-1);
+    exit(EXIT_FAILURE);
+  }
+
+  // cuda kernel num
+  int kernel_num = atoi(argv[1]);
+  if (kernel_num < 1 || kernel_num > KERNEL_COUNT) {
+    printf("Please enter a valid kernel number (1-%d).\n", KERNEL_COUNT-1);
+    exit(EXIT_FAILURE);
+  } else {
+    printf("Selected kernel %d.\n", kernel_num);
+  };
+
   const size_t N = (size_t(1) << 10);
   assert(N > 0 && "please have meaningful input size");
   float *input = (float *)malloc(N * sizeof(float));
@@ -33,14 +61,13 @@ int main() {
   gpuErrchk(cudaMemcpy(devicePtr, input, N * sizeof(input[0]),
                        cudaMemcpyHostToDevice));
 
-  // Compute launch configuration params.
-  size_t nrThreadsPerBlock = 128;
-  size_t nrEltToProcessPerBlock = 1024;
-  size_t sharedMemoryRequirement = nrEltToProcessPerBlock * sizeof(float);
-  size_t nrBlocks = size_t(std::ceil(float(N) / nrEltToProcessPerBlock));
-  printf("Launching the kernel...\n");
-  sum_simple<1024><<<nrBlocks, nrThreadsPerBlock, sharedMemoryRequirement>>>(
-      devicePtr, N, deviceOutputPtr);
+  switch (kernel_num) {
+  case 1:
+    run_kernel_1(devicePtr, deviceOutputPtr, N);
+    break;
+  default:
+    assert(false && "Found a new bug!");
+  }
 
   // Copy back the output to host.
   gpuErrchk(cudaMemcpy(&output, deviceOutputPtr, sizeof(output),
