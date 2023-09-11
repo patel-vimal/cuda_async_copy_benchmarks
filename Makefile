@@ -34,3 +34,7 @@ profile: build
 debug_profile: debug
 	@mkdir -p $(BENCHMARK_DIR)
 	@ncu --set full --export $(BENCHMARK_DIR)/$(PREFIX)kernel_$(KERNEL)_debug --force-overwrite $(BUILD_DIR)/main $(KERNEL)
+
+debug_benchmark_cp_async: debug
+	@mkdir -p $(BENCHMARK_DIR)
+	@bash ./src/benchmark_cp_async.sh
